@@ -1,0 +1,5 @@
+Flask==3.0.3
+python-dotenv==1.1.1
+supabase==2.22.0
+supabase-auth==2.22.0
+supabase-functions==2.22.0
