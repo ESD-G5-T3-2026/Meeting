@@ -50,6 +50,7 @@ def post_meeting_to_club(club_id):
             "event_id": data.get("event_id", ""),
             "meeting_dt": meeting_dt,
             "personnel_list": data.get("personnel_list", {}),
+            "status": "Planned"
             # created_at is defaulted by DB
         }
         result = supabase.table("meetings").insert(insert_data).execute()
@@ -70,7 +71,7 @@ def update_meeting(club_id, meeting_id):
     try:
         update_data = {}
         allowed_fields = [
-            "timeful_link", "zoom_link", "event_id", "meeting_dt", "personnel_list"
+            "timeful_link", "zoom_link", "event_id", "meeting_dt", "personnel_list","status"
         ]
         for field in allowed_fields:
             if field in data:
