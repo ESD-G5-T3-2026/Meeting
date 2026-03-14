@@ -47,7 +47,7 @@ def post_meeting_to_club(club_id):
             "timeful_link": data.get("timeful_link", ""),
             "zoom_link": data.get("zoom_link", ""),
             "club_id": club_id,
-            "event_id": data.get("event_id", ""),
+            "event_id": data.get("event_id", None),
             "meeting_dt": meeting_dt,
             "personnel_list": data.get("personnel_list", {}),
             "status": "Planned"
