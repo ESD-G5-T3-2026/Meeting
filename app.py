@@ -1,5 +1,6 @@
 
 import os 
+from flasgger import Swagger
 from flask import Flask, jsonify, request
 from dotenv import load_dotenv
 from supabase import create_client
@@ -11,14 +12,48 @@ port = os.environ.get("PORT")
 supabase = create_client(url, key)
 
 app = Flask(__name__)
+swagger = Swagger(app)
 
 
 @app.route('/health')
 def check():
+    """
+    Health Check
+    ---
+    responses:
+      200:
+        description: Server is working
+        schema:
+          type: string
+    """
     return 'Server is working'
 
 @app.route('/<club_id>', methods=['GET'])
 def get_all_meetings_by_club(club_id):
+    """
+    Get all meetings for a club
+    ---
+    parameters:
+      - name: club_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the club
+    responses:
+      200:
+        description: Returns a list of meetings for the club
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+      500:
+        description: Internal server error
+    """
     try:
         result = supabase.table("meetings").select("*").eq("club_id", club_id).execute()
         return jsonify({
@@ -35,6 +70,50 @@ def get_all_meetings_by_club(club_id):
 
 @app.route('/<club_id>', methods=['POST'])
 def post_meeting_to_club(club_id):
+    """
+    Create a meeting for a club
+    ---
+    parameters:
+      - name: club_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the club
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            meeting_dt:
+              type: string
+              required: true
+              description: Meeting date/time
+            timeful_link:
+              type: string
+            zoom_link:
+              type: string
+            event_id:
+              type: integer
+            personnel_list:
+              type: object
+            status:
+              type: string
+    responses:
+      201:
+        description: Meeting created successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      400:
+        description: Missing required fields
+      500:
+        description: Internal server error
+    """
     data = request.get_json()
     meeting_dt = data.get("meeting_dt")
     if not meeting_dt or not club_id:
@@ -67,6 +146,53 @@ def post_meeting_to_club(club_id):
 
 @app.route('/<club_id>/<meeting_id>', methods=['PUT'])
 def update_meeting(club_id, meeting_id):
+    """
+    Update a meeting
+    ---
+    parameters:
+      - name: club_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the club
+      - name: meeting_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the meeting
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            timeful_link:
+              type: string
+            zoom_link:
+              type: string
+            event_id:
+              type: integer
+            meeting_dt:
+              type: string
+            personnel_list:
+              type: object
+            status:
+              type: string
+    responses:
+      200:
+        description: Meeting updated successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      400:
+        description: No valid fields to update
+      500:
+        description: Internal server error
+    """
     data = request.get_json()
     try:
         update_data = {}
@@ -98,6 +224,37 @@ def update_meeting(club_id, meeting_id):
     
 @app.route('/<club_id>/<meeting_id>', methods=['DELETE'])
 def delete_meeting(club_id, meeting_id):
+    """
+    Delete a meeting
+    ---
+    parameters:
+      - name: club_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the club
+      - name: meeting_id
+        in: path
+        type: integer
+        required: true
+        description: ID of the meeting
+    responses:
+      200:
+        description: Meeting deleted successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            message:
+              type: string
+            data:
+              type: object
+      404:
+        description: Meeting not found
+      500:
+        description: Internal server error
+    """
     try:
         result = supabase.table("meetings")\
             .delete()\
