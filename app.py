@@ -32,11 +32,11 @@ def check():
 @app.route('/meetings/pending', methods=['GET'])
 def get_all_pending_meetings():
     """
-    personnel_list and timeful_link for meetings with status Pending (any club)
+    personnel_list, timeful_link, meeting_name for meetings with status Pending (any club)
     ---
     responses:
       200:
-        description: One object per pending meeting with personnel_list and timeful_link only
+        description: One object per pending meeting (subset of columns)
         schema:
           type: object
           properties:
@@ -51,13 +51,15 @@ def get_all_pending_meetings():
                     type: object
                   timeful_link:
                     type: string
+                  meeting_name:
+                    type: string
       500:
         description: Internal server error
     """
     try:
         result = (
             supabase.table("meetings")
-            .select("personnel_list,timeful_link")
+            .select("personnel_list,timeful_link,meeting_name")
             .eq("status", "Pending")
             .execute()
         )
@@ -134,6 +136,8 @@ def post_meeting_to_club(club_id):
             meeting_dt:
               type: string
               description: Meeting date/time (optional)
+            meeting_name:
+              type: string
             timeful_link:
               type: string
             zoom_link:
@@ -166,6 +170,7 @@ def post_meeting_to_club(club_id):
             "club_id": club_id,
             "event_id": data.get("event_id", None),
             "meeting_dt": data.get("meeting_dt"),
+            "meeting_name": data.get("meeting_name"),
             "personnel_list": data.get("personnel_list", {}),
             "status": data.get("status", "Planned"),
             # created_at is defaulted by DB
@@ -212,6 +217,8 @@ def update_meeting(club_id, meeting_id):
               type: integer
             meeting_dt:
               type: string
+            meeting_name:
+              type: string
             personnel_list:
               type: object
             status:
@@ -235,7 +242,13 @@ def update_meeting(club_id, meeting_id):
     try:
         update_data = {}
         allowed_fields = [
-            "timeful_link", "zoom_link", "event_id", "meeting_dt", "personnel_list","status"
+            "timeful_link",
+            "zoom_link",
+            "event_id",
+            "meeting_dt",
+            "meeting_name",
+            "personnel_list",
+            "status",
         ]
         for field in allowed_fields:
             if field in data:
