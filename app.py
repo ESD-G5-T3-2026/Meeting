@@ -14,6 +14,23 @@ supabase = create_client(url, key)
 app = Flask(__name__)
 swagger = Swagger(app)
 
+MEETING_UPDATE_FIELDS = (
+    "timeful_link",
+    "zoom_link",
+    "event_id",
+    "meeting_dt",
+    "meeting_name",
+    "personnel_list",
+    "status",
+)
+
+
+def _meeting_patch_from_body():
+    data = request.get_json()
+    if not isinstance(data, dict):
+        data = {}
+    return {k: data[k] for k in MEETING_UPDATE_FIELDS if k in data}
+
 
 @app.route('/health')
 def check():
@@ -189,10 +206,80 @@ def post_meeting_to_club(club_id):
         }), 500
 
 
+@app.route('/meetings/<meeting_id>', methods=['PUT'])
+def update_meeting_by_id(meeting_id):
+    """
+    Update a meeting by primary key (id only)
+    ---
+    parameters:
+      - name: meeting_id
+        in: path
+        type: integer
+        required: true
+        description: Primary key of the meeting
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            timeful_link:
+              type: string
+            zoom_link:
+              type: string
+            event_id:
+              type: integer
+            meeting_dt:
+              type: string
+            meeting_name:
+              type: string
+            personnel_list:
+              type: object
+            status:
+              type: string
+    responses:
+      200:
+        description: Meeting updated successfully
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: object
+      400:
+        description: No valid fields to update
+      500:
+        description: Internal server error
+    """
+    try:
+        update_data = _meeting_patch_from_body()
+        if not update_data:
+            return jsonify({
+                "status": "error",
+                "message": "No valid fields to update"
+            }), 400
+        result = (
+            supabase.table("meetings")
+            .update(update_data)
+            .eq("id", meeting_id)
+            .execute()
+        )
+        return jsonify({
+            "status": "ok",
+            "data": result.data
+        }), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+
 @app.route('/<club_id>/<meeting_id>', methods=['PUT'])
 def update_meeting(club_id, meeting_id):
     """
-    Update a meeting
+    Update a meeting (scoped by club_id and meeting id)
     ---
     parameters:
       - name: club_id
@@ -240,31 +327,20 @@ def update_meeting(club_id, meeting_id):
       500:
         description: Internal server error
     """
-    data = request.get_json()
     try:
-        update_data = {}
-        allowed_fields = [
-            "timeful_link",
-            "zoom_link",
-            "event_id",
-            "meeting_dt",
-            "meeting_name",
-            "personnel_list",
-            "status",
-        ]
-        for field in allowed_fields:
-            if field in data:
-                update_data[field] = data[field]
+        update_data = _meeting_patch_from_body()
         if not update_data:
             return jsonify({
                 "status": "error",
                 "message": "No valid fields to update"
             }), 400
-        result = supabase.table("meetings")\
-            .update(update_data)\
-            .eq("id", meeting_id)\
-            .eq("club_id", club_id)\
+        result = (
+            supabase.table("meetings")
+            .update(update_data)
+            .eq("id", meeting_id)
+            .eq("club_id", club_id)
             .execute()
+        )
         return jsonify({
             "status": "ok",
             "data": result.data
@@ -274,7 +350,8 @@ def update_meeting(club_id, meeting_id):
             "status": "error",
             "message": str(e)
         }), 500
-    
+
+
 @app.route('/<club_id>/<meeting_id>', methods=['DELETE'])
 def delete_meeting(club_id, meeting_id):
     """
