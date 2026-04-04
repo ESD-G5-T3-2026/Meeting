@@ -32,7 +32,7 @@ def check():
 @app.route('/meetings/pending', methods=['GET'])
 def get_all_pending_meetings():
     """
-    personnel_list, timeful_link, meeting_name for meetings with status Pending (any club)
+    id, personnel_list, timeful_link, meeting_name for meetings with status Pending (any club)
     ---
     responses:
       200:
@@ -47,6 +47,8 @@ def get_all_pending_meetings():
               items:
                 type: object
                 properties:
+                  id:
+                    type: integer
                   personnel_list:
                     type: object
                   timeful_link:
@@ -59,7 +61,7 @@ def get_all_pending_meetings():
     try:
         result = (
             supabase.table("meetings")
-            .select("personnel_list,timeful_link,meeting_name")
+            .select("id,personnel_list,timeful_link,meeting_name")
             .eq("status", "Pending")
             .execute()
         )
