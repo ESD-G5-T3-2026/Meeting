@@ -28,6 +28,44 @@ def check():
     """
     return 'Server is working'
 
+
+@app.route('/meetings/pending', methods=['GET'])
+def get_all_pending_meetings():
+    """
+    personnel_list and timeful_link for meetings with status Pending (any club)
+    ---
+    responses:
+      200:
+        description: One object per pending meeting with personnel_list and timeful_link only
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  personnel_list:
+                    type: object
+                  timeful_link:
+                    type: string
+      500:
+        description: Internal server error
+    """
+    try:
+        result = (
+            supabase.table("meetings")
+            .select("personnel_list,timeful_link")
+            .eq("status", "Pending")
+            .execute()
+        )
+        return jsonify({"status": "ok", "data": result.data or []}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @app.route('/<club_id>', methods=['GET'])
 def get_all_meetings_by_club(club_id):
     """
@@ -95,8 +133,7 @@ def post_meeting_to_club(club_id):
           properties:
             meeting_dt:
               type: string
-              required: true
-              description: Meeting date/time
+              description: Meeting date/time (optional)
             timeful_link:
               type: string
             zoom_link:
@@ -107,6 +144,7 @@ def post_meeting_to_club(club_id):
               type: object
             status:
               type: string
+              description: Stored on the row; defaults to Planned if omitted
     responses:
       201:
         description: Meeting created successfully
@@ -117,27 +155,19 @@ def post_meeting_to_club(club_id):
               type: string
             data:
               type: object
-      400:
-        description: Missing required fields
       500:
         description: Internal server error
     """
-    data = request.get_json()
-    meeting_dt = data.get("meeting_dt")
-    if not meeting_dt or not club_id:
-        return jsonify({
-            "status": "error",
-            "message": "meeting_dt and club_id are required"
-        }), 400
+    data = request.get_json() or {}
     try:
         insert_data = {
             "timeful_link": data.get("timeful_link", ""),
             "zoom_link": data.get("zoom_link", ""),
             "club_id": club_id,
             "event_id": data.get("event_id", None),
-            "meeting_dt": meeting_dt,
+            "meeting_dt": data.get("meeting_dt"),
             "personnel_list": data.get("personnel_list", {}),
-            "status": "Planned"
+            "status": data.get("status", "Planned"),
             # created_at is defaulted by DB
         }
         result = supabase.table("meetings").insert(insert_data).execute()
