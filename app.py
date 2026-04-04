@@ -39,6 +39,11 @@ def get_all_meetings_by_club(club_id):
         type: integer
         required: true
         description: ID of the club
+      - name: status
+        in: query
+        type: string
+        required: false
+        description: Filter by meeting status (e.g. Pending)
     responses:
       200:
         description: Returns a list of meetings for the club
@@ -55,7 +60,11 @@ def get_all_meetings_by_club(club_id):
         description: Internal server error
     """
     try:
-        result = supabase.table("meetings").select("*").eq("club_id", club_id).execute()
+        q = supabase.table("meetings").select("*").eq("club_id", club_id)
+        status_filter = request.args.get("status")
+        if status_filter is not None and status_filter != "":
+            q = q.eq("status", status_filter)
+        result = q.execute()
         return jsonify({
             "status": "ok",
             "data": result.data
@@ -65,7 +74,6 @@ def get_all_meetings_by_club(club_id):
             "status": "error",
             "message": str(e)
         }), 500
-
 
 
 @app.route('/<club_id>', methods=['POST'])
